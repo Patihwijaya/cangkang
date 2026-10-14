@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Cangkang</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen">
+
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+        <h2 class="text-2xl font-bold text-center text-blue-600 mb-6">Masuk ke Cangkang</h2>
+        
+        <form id="loginForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Email</label>
+                <input type="email" id="email" required class="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500" value="super@cangkang.com">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Password</label>
+                <input type="password" id="password" required class="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500" value="rahasia123">
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700 transition">
+                Masuk
+            </button>
+        </form>
+        
+        <p class="mt-4 text-center text-sm text-gray-600">
+            Belum punya akun? <a href="register.html" class="text-blue-600 hover:underline">Daftar di sini</a>
+        </p>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('http://localhost:5000/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Simpan data user ke memori browser agar dikenali di halaman lain
+                    localStorage.setItem('cangkang_user', JSON.stringify(data.user));
+                    
+                    alert('Selamat datang, ' + data.user.nama + '!');
+
+                    // Arahkan ke dashboard masing-masing sesuai Role
+                    if (data.user.role === 'super_admin') {
+                        window.location.href = 'dashboard-super.html';
+                    } else if (data.user.role === 'admin') {
+                        window.location.href = 'dashboard-admin.html';
+                    } else {
+                        window.location.href = 'index.html'; // Penyewa diarahkan ke beranda pencarian
+                    }
+                } else {
+                    alert('Gagal: ' + data.message);
+                }
+            } catch (error) {
+                alert('Terjadi kesalahan pada server. Pastikan backend sudah menyala.');
+            }
+        });
+    </script>
+</body>
+</html>

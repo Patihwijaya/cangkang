@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin - Cangkang</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body class="bg-gray-50 text-slate-800">
+
+    <!-- NAVBAR -->
+    <nav class="bg-white shadow-sm border-b px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+        <div class="text-2xl font-bold text-blue-600">Cangkang <span class="text-sm font-normal text-gray-500">| Admin</span></div>
+        <div class="flex items-center space-x-4">
+            <span id="adminName" class="font-medium text-sm">Memuat...</span>
+            <button onclick="logout()" class="text-red-500 hover:text-red-700 text-sm font-semibold">Keluar</button>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- KOLOM KIRI: Form Tambah/Edit Gedung -->
+        <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm border h-fit" id="formContainer">
+            <div class="flex justify-between items-center border-b pb-2 mb-4">
+                <h2 id="formTitle" class="text-lg font-bold text-blue-600">➕ Tambah Properti Baru</h2>
+                <button type="button" id="btnBatalEdit" onclick="batalkanEdit()" class="hidden text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded font-semibold">Batal Edit</button>
+            </div>
+            
+            <form id="formGedung" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium">Nama Gedung</label>
+                    <input type="text" id="namaGedung" required class="mt-1 w-full border px-3 py-2 rounded-md text-sm">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium">Kategori</label>
+                        <select id="kategori" class="mt-1 w-full border px-3 py-2 rounded-md text-sm">
+                            <option value="kos-kosan">Kos-kosan</option>
+                            <option value="kontrakan">Kontrakan</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Tipe Sewa</label>
+                        <select id="tipeSewa" class="mt-1 w-full border px-3 py-2 rounded-md text-sm">
+                            <option value="bulan">Per Bulan</option>
+                            <option value="tahun">Per Tahun</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium">Harga (Rp)</label>
+                        <input type="number" id="harga" required class="mt-1 w-full border px-3 py-2 rounded-md text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Sisa Kamar</label>
+                        <input type="number" id="sisaKamar" value="1" required class="mt-1 w-full border px-3 py-2 rounded-md text-sm">
+                    </div>
+                </div>
+
+                <!-- CARI LOKASI MANUAL -->
+                <div class="mt-6 pt-4 border-t">
+                    <label class="block text-sm font-medium text-blue-600 mb-1">Cari Lokasi Properti</label>
+                    <div class="flex mt-1 mb-3">
+                        <input type="text" id="inputCariAlamat" placeholder="Contoh: Jl. Sudirman, Jakarta" class="w-full border px-3 py-2 text-sm rounded-l-md outline-none">
+                        <button type="button" id="btnCariLokasi" class="bg-slate-800 text-white px-4 py-2 text-sm rounded-r-md font-semibold hover:bg-slate-700">Cari</button>
+                    </div>
+                    <div id="map" class="w-full h-56 rounded-md border border-gray-300 shadow-inner z-10 relative"></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <input type="text" id="latitude" readonly required class="mt-1 w-full border px-3 py-2 rounded-md text-xs bg-gray-100 text-gray-500" placeholder="Lat">
+                    </div>
+                    <div>
+                        <input type="text" id="longitude" readonly required class="mt-1 w-full border px-3 py-2 rounded-md text-xs bg-gray-100 text-gray-500" placeholder="Lng">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium">Alamat Lengkap</label>
+                    <textarea id="alamat" required class="mt-1 w-full border px-3 py-2 rounded-md text-sm" rows="2"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium">Fasilitas & Deskripsi</label>
+                    <textarea id="deskripsi" class="mt-1 w-full border px-3 py-2 rounded-md text-sm" rows="2"></textarea>
+                </div>
+
+                <div id="containerFoto">
+                    <label class="block text-sm font-medium text-blue-600">Pilih Foto (Maks 5, Format JPG/PNG)</label>
+                    <input type="file" id="fotoGedung" multiple accept="image/*" required class="mt-1 w-full border p-2 rounded-md text-sm">
+                    <p class="text-xs text-amber-600 mt-1 hidden" id="infoFotoEdit">*Kosongkan jika tidak ingin ubah foto.</p>
+                </div>
+
+                <button type="submit" id="btnSubmit" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700 transition">
+                    Simpan Properti
+                </button>
+            </form>
+        </div>
+
+        <!-- KOLOM KANAN: Manajemen (Tabs) -->
+        <div class="lg:col-span-2">
+            
+            <!-- TABS MENU -->
+            <div class="flex space-x-6 border-b mb-6">
+                <button id="tabBtnProperti" onclick="gantiTab('properti')" class="pb-2 border-b-2 border-blue-600 font-bold text-blue-600 text-lg transition">🏠 Properti Anda</button>
+                
+                <button id="tabBtnBooking" onclick="gantiTab('booking')" class="relative pb-2 border-b-2 border-transparent text-gray-500 font-medium text-lg hover:text-blue-600 transition">
+                    📝 Permintaan Sewa 
+                    <!-- Notifikasi Dot Merah (opsional) -->
+                    <span id="notifBooking" class="hidden absolute top-0 -right-3 flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                    </span>
+                </button>
+            </div>
+
+            <!-- KONTEN 1: PROPERTI ANDA -->
+            <div id="kontenProperti" class="block">
+                <div id="loadingText" class="text-gray-500">Memuat properti...</div>
+                <div id="gedungList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Data properti -->
+                </div>
+            </div>
+
+            <!-- KONTEN 2: PERMINTAAN SEWA -->
+            <div id="kontenBooking" class="hidden">
+                <div id="loadingBookingText" class="text-gray-500">Memuat permintaan sewa...</div>
+                
+                <!-- State Kosong -->
+                <div id="emptyBookingState" class="hidden bg-white rounded-xl shadow-sm border p-12 text-center">
+                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                    </div>
+                    <h2 class="text-lg font-bold text-gray-800 mb-1">Belum Ada Permintaan Sewa</h2>
+                    <p class="text-gray-500 text-sm">Belum ada penyewa yang melakukan booking pada properti Anda.</p>
+                </div>
+
+                <!-- List Booking -->
+                <div id="bookingList" class="flex flex-col space-y-4">
+                    <!-- Data booking masuk -->
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // === LOGIKA TABS ===
+        function gantiTab(tabAktif) {
+            const btnProperti = document.getElementById('tabBtnProperti');
+            const btnBooking = document.getElementById('tabBtnBooking');
+            const kontenProperti = document.getElementById('kontenProperti');
+            const kontenBooking = document.getElementById('kontenBooking');
+
+            if(tabAktif === 'properti') {
+                btnProperti.classList.replace('border-transparent', 'border-blue-600');
+                btnProperti.classList.replace('text-gray-500', 'text-blue-600');
+                btnProperti.classList.add('font-bold');
+                
+                btnBooking.classList.replace('border-blue-600', 'border-transparent');
+                btnBooking.classList.replace('text-blue-600', 'text-gray-500');
+                btnBooking.classList.remove('font-bold');
+
+                kontenProperti.classList.remove('hidden');
+                kontenBooking.classList.add('hidden');
+                
+                loadDataGedung();
+            } else {
+                btnBooking.classList.replace('border-transparent', 'border-blue-600');
+                btnBooking.classList.replace('text-gray-500', 'text-blue-600');
+                btnBooking.classList.add('font-bold');
+                
+                btnProperti.classList.replace('border-blue-600', 'border-transparent');
+                btnProperti.classList.replace('text-blue-600', 'text-gray-500');
+                btnProperti.classList.remove('font-bold');
+
+                kontenBooking.classList.remove('hidden');
+                kontenProperti.classList.add('hidden');
+
+                loadDataBookingMasuk(); // Ambil data saat tab dibuka
+            }
+        }
+
+        // === KONFIGURASI LEAFLET & AUTENTIKASI (Tetap sama spt sebelumnya) ===
+        let map, marker, propertiAdmin = [], modeEdit = false, idEditAktif = null;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const defaultLat = -6.1754, defaultLng = 106.8272;
+            map = L.map('map').setView([defaultLat, defaultLng], 12);
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}').addTo(map);
+            marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
+
+            marker.on('dragend', function(e) { updateInformasiLokasi(marker.getLatLng().lat, marker.getLatLng().lng); });
+            map.on('click', function(e) { marker.setLatLng(e.latlng); updateInformasiLokasi(e.latlng.lat, e.latlng.lng); });
+            setTimeout(() => { map.invalidateSize(); }, 500);
+
+            // Cek Autentikasi
+            const user = JSON.parse(localStorage.getItem('cangkang_user'));
+            if (!user || user.role !== 'admin') {
+                alert('Akses Ditolak! Halaman ini hanya untuk Pemilik Gedung.');
+                window.location.href = 'login.html';
+            } else {
+                document.getElementById('adminName').innerText = `Halo, ${user.nama}`;
+                loadDataGedung();
+                cekNotifBookingBaru(); // Cek diam-diam jika ada booking
+            }
+        });
+
+        async function updateInformasiLokasi(lat, lng) {
+            document.getElementById("latitude").value = lat.toFixed(6);
+            document.getElementById("longitude").value = lng.toFixed(6);
+            document.getElementById("alamat").value = "Mencari alamat...";
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                const data = await response.json();
+                document.getElementById("alamat").value = (data && data.display_name) ? data.display_name : "Tidak ditemukan.";
+            } catch(e) { document.getElementById("alamat").value = "Gagal memuat alamat."; }
+        }
+
+        document.getElementById('btnCariLokasi').addEventListener('click', async function() {
+            const query = document.getElementById('inputCariAlamat').value;
+            if(!query) return;
+            this.innerText = "...";
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                if(data && data.length > 0) {
+                    map.setView([data[0].lat, data[0].lon], 17);
+                    marker.setLatLng([data[0].lat, data[0].lon]);
+                    updateInformasiLokasi(parseFloat(data[0].lat), parseFloat(data[0].lon));
+                }
+            } catch(e) {}
+            this.innerText = "Cari";
+        });
+
+        function logout() { localStorage.removeItem('cangkang_user'); window.location.href = 'login.html'; }
+
+        // === FUNGSI: LOAD PROPERTI ===
+        async function loadDataGedung() {
+            const user = JSON.parse(localStorage.getItem('cangkang_user'));
+            const listContainer = document.getElementById('gedungList');
+            document.getElementById('loadingText').style.display = 'none';
+            listContainer.innerHTML = ''; 
+            try {
+                const res = await fetch(`http://localhost:5000/api/gedung/owner/${user.id}`);
+                propertiAdmin = await res.json();
+                if(propertiAdmin.length === 0) { listContainer.innerHTML = '<p class="text-gray-500">Belum ada properti.</p>'; return; }
+
+                propertiAdmin.forEach(g => {
+                    const fotoUrl = g.foto_utama ? `http://localhost:5000/uploads/${g.foto_utama}` : 'https://via.placeholder.com/400x200';
+                    listContainer.innerHTML += `
+                        <div class="bg-white rounded-lg border flex flex-col overflow-hidden">
+                            <img src="${fotoUrl}" class="h-32 object-cover">
+                            <div class="p-4 flex-1 flex flex-col">
+                                <span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase w-fit">${g.kategori}</span>
+                                <h3 class="font-bold mt-1 leading-tight">${g.nama_gedung}</h3>
+                                <p class="text-xs text-gray-500 mt-1 mb-2 line-clamp-1">${g.alamat}</p>
+                                <div class="mt-auto flex space-x-2">
+                                    <button onclick="editGedung(${g.id})" class="flex-1 bg-amber-500 text-white text-xs font-bold py-1.5 rounded">Edit</button>
+                                    <button onclick="hapusGedung(${g.id})" class="flex-1 bg-red-500 text-white text-xs font-bold py-1.5 rounded">Hapus</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (e) { listContainer.innerHTML = '<span class="text-red-500">Gagal server.</span>'; }
+        }
+
+        // === FUNGSI BARU: LOAD BOOKING MASUK ===
+        async function loadDataBookingMasuk() {
+            const user = JSON.parse(localStorage.getItem('cangkang_user'));
+            const listContainer = document.getElementById('bookingList');
+            const elEmpty = document.getElementById('emptyBookingState');
+            document.getElementById('loadingBookingText').style.display = 'none';
+            
+            try {
+                const response = await fetch(`http://localhost:5000/api/booking/admin/${user.id}`);
+                const data = await response.json();
+                
+                listContainer.innerHTML = '';
+
+                if (data.length === 0) {
+                    elEmpty.classList.remove('hidden');
+                    return;
+                }
+                
+                elEmpty.classList.add('hidden');
+                
+                // Matikan notif merah karena sudah dibuka
+                document.getElementById('notifBooking').classList.add('hidden');
+
+                data.forEach(booking => {
+                    // Format Tanggal
+                    const tgl = new Date(booking.tanggal_booking).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric', hour:'2-digit', minute:'2-digit'});
+                    
+                    // Render UI Tombol Aksi
+                    let uiAksi = '';
+                    if (booking.status === 'pending') {
+                        uiAksi = `
+                            <div class="flex space-x-3 mt-4 lg:mt-0 lg:ml-4 shrink-0">
+                                <button onclick="ubahStatusSewa(${booking.booking_id}, 'disetujui')" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-6 py-2 rounded-lg shadow-sm transition">Setujui</button>
+                                <button onclick="ubahStatusSewa(${booking.booking_id}, 'ditolak')" class="bg-red-100 hover:bg-red-200 text-red-600 text-sm font-bold px-6 py-2 rounded-lg transition">Tolak</button>
+                            </div>
+                        `;
+                    } else if (booking.status === 'disetujui') {
+                        uiAksi = `<div class="mt-4 lg:mt-0 font-bold text-green-600 bg-green-50 px-4 py-2 rounded-lg border border-green-200">✅ Telah Disetujui</div>`;
+                    } else {
+                        uiAksi = `<div class="mt-4 lg:mt-0 font-bold text-red-600 bg-red-50 px-4 py-2 rounded-lg border border-red-200">❌ Telah Ditolak</div>`;
+                    }
+
+                    listContainer.innerHTML += `
+                        <div class="bg-white border rounded-xl p-5 flex flex-col lg:flex-row justify-between lg:items-center shadow-sm">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2 mb-1">
+                                    <span class="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded font-bold uppercase">${booking.kategori}</span>
+                                    <span class="text-xs text-gray-400">🕒 ${tgl}</span>
+                                </div>
+                                <h3 class="text-lg font-bold text-blue-900 mb-2">${booking.nama_gedung}</h3>
+                                
+                                <div class="bg-gray-50 p-3 rounded-lg border flex items-center space-x-3 w-fit">
+                                    <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex justify-center items-center font-bold">${booking.nama_penyewa.charAt(0)}</div>
+                                    <div>
+                                        <p class="text-sm font-bold text-gray-800">${booking.nama_penyewa}</p>
+                                        <p class="text-xs text-gray-500">${booking.email_penyewa}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            ${uiAksi}
+                        </div>
+                    `;
+                });
+
+            } catch (error) {
+                listContainer.innerHTML = '<span class="text-red-500">Gagal terhubung ke server backend.</span>';
+            }
+        }
+
+        // === FUNGSI BARU: UPDATE STATUS SEWA (SETUJUI/TOLAK) ===
+        async function ubahStatusSewa(bookingId, statusBaru) {
+            const konfirmasi = confirm(`Apakah Anda yakin ingin ${statusBaru === 'disetujui' ? 'MENYETUJUI' : 'MENOLAK'} permintaan sewa ini?`);
+            if (!konfirmasi) return;
+
+            try {
+                const response = await fetch(`http://localhost:5000/api/booking/${bookingId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: statusBaru })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert(result.message);
+                    loadDataBookingMasuk(); // Refresh list agar UI tombol berubah
+                } else {
+                    alert("Gagal merubah status: " + result.error);
+                }
+            } catch (error) {
+                alert("Terjadi kesalahan jaringan.");
+            }
+        }
+
+        // Cek diam-diam apakah ada booking 'pending' untuk menampilkan dot merah di Tab
+        async function cekNotifBookingBaru() {
+            const user = JSON.parse(localStorage.getItem('cangkang_user'));
+            try {
+                const res = await fetch(`http://localhost:5000/api/booking/admin/${user.id}`);
+                const data = await res.json();
+                const adaPending = data.some(b => b.status === 'pending');
+                if(adaPending) {
+                    document.getElementById('notifBooking').classList.remove('hidden');
+                }
+            } catch(e) {}
+        }
+
+
+        // === (Fungsi Bawaan CRUD Gedung) ===
+        function editGedung(id) {
+            const target = propertiAdmin.find(g => g.id === id);
+            if(!target) return;
+            modeEdit = true; idEditAktif = id;
+            document.getElementById('formTitle').innerText = "✏️ Edit Properti";
+            document.getElementById('formTitle').classList.replace('text-blue-600', 'text-amber-600');
+            document.getElementById('btnSubmit').innerText = "Update Properti";
+            document.getElementById('btnSubmit').classList.replace('bg-blue-600', 'bg-amber-500');
+            document.getElementById('btnBatalEdit').classList.remove('hidden');
+            document.getElementById('fotoGedung').removeAttribute('required');
+            document.getElementById('infoFotoEdit').classList.remove('hidden');
+            
+            document.getElementById('namaGedung').value = target.nama_gedung;
+            document.getElementById('kategori').value = target.kategori;
+            document.getElementById('tipeSewa').value = target.tipe_sewa;
+            document.getElementById('harga').value = target.harga;
+            document.getElementById('sisaKamar').value = target.sisa_kamar;
+            document.getElementById('latitude').value = target.latitude;
+            document.getElementById('longitude').value = target.longitude;
+            document.getElementById('alamat').value = target.alamat;
+            document.getElementById('deskripsi').value = target.deskripsi;
+            
+            map.setView([target.latitude, target.longitude], 17);
+            marker.setLatLng([target.latitude, target.longitude]);
+            document.getElementById('formContainer').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function batalkanEdit() {
+            modeEdit = false; idEditAktif = null;
+            document.getElementById('formGedung').reset();
+            document.getElementById('formTitle').innerText = "➕ Tambah Properti Baru";
+            document.getElementById('formTitle').classList.replace('text-amber-600', 'text-blue-600');
+            document.getElementById('btnSubmit').innerText = "Simpan Properti";
+            document.getElementById('btnSubmit').classList.replace('bg-amber-500', 'bg-blue-600');
+            document.getElementById('btnBatalEdit').classList.add('hidden');
+            document.getElementById('fotoGedung').setAttribute('required', 'true');
+            document.getElementById('infoFotoEdit').classList.add('hidden');
+            document.getElementById("latitude").value = ""; document.getElementById("longitude").value = "";
+        }
+
+        async function hapusGedung(id) {
+            if (!confirm("Hapus properti ini beserta semua riwayat sewanya?")) return;
+            try {
+                await fetch(`http://localhost:5000/api/gedung/${id}`, { method: 'DELETE' });
+                alert('Dihapus.'); loadDataGedung();
+            } catch (error) { alert('Gagal.'); }
+        }
+
+        document.getElementById('formGedung').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if(!document.getElementById('latitude').value) { alert("Pilih lokasi di peta!"); return; }
+            
+            const btnSubmit = document.getElementById('btnSubmit');
+            const teksAsli = btnSubmit.innerText; btnSubmit.innerText = 'Memproses...'; btnSubmit.disabled = true;
+
+            const user = JSON.parse(localStorage.getItem('cangkang_user'));
+            const dataGedung = {
+                owner_id: user.id, nama_gedung: document.getElementById('namaGedung').value,
+                kategori: document.getElementById('kategori').value, tipe_sewa: document.getElementById('tipeSewa').value,
+                harga: document.getElementById('harga').value, sisa_kamar: document.getElementById('sisaKamar').value,
+                latitude: document.getElementById('latitude').value, longitude: document.getElementById('longitude').value,
+                alamat: document.getElementById('alamat').value, deskripsi: document.getElementById('deskripsi').value
+            };
+
+            try {
+                if (modeEdit) {
+                    await fetch(`http://localhost:5000/api/gedung/${idEditAktif}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dataGedung) });
+                    const fotoInput = document.getElementById('fotoGedung');
+                    if (fotoInput.files.length > 0) {
+                        const formData = new FormData();
+                        for (let i = 0; i < Math.min(fotoInput.files.length, 5); i++) formData.append('fotos', fotoInput.files[i]);
+                        await fetch(`http://localhost:5000/api/gedung/${idEditAktif}/photos`, { method: 'POST', body: formData });
+                    }
+                    alert('Diperbarui!'); batalkanEdit();
+                } else {
+                    const res = await fetch('http://localhost:5000/api/gedung', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dataGedung) });
+                    const resTeks = await res.json();
+                    const fotoInput = document.getElementById('fotoGedung');
+                    if (fotoInput.files.length > 0) {
+                        const formData = new FormData();
+                        for (let i = 0; i < Math.min(fotoInput.files.length, 5); i++) formData.append('fotos', fotoInput.files[i]);
+                        await fetch(`http://localhost:5000/api/gedung/${resTeks.gedung_id}/photos`, { method: 'POST', body: formData });
+                    }
+                    alert('Ditambahkan!');
+                    document.getElementById('formGedung').reset();
+                    document.getElementById("latitude").value = ""; document.getElementById("longitude").value = "";
+                }
+                loadDataGedung();
+            } catch (error) { alert('Error: ' + error.message); } 
+            finally { btnSubmit.innerText = teksAsli; btnSubmit.disabled = false; }
+        });
+    </script>
+</body>
+</html>

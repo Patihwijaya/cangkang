@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detail Properti - Cangkang</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body class="bg-gray-50 text-slate-800 antialiased">
+
+    <!-- NAVBAR -->
+    <nav class="bg-white shadow-sm border-b px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+        <a href="index.html" class="text-2xl font-extrabold text-blue-600 tracking-tight">Cangkang<span class="text-amber-500">.</span></a>
+        <div id="navUserSection">
+            <a href="login.html" class="text-sm font-semibold text-gray-700 hover:text-blue-600">Masuk / Daftar</a>
+        </div>
+    </nav>
+
+    <!-- LOADING STATE PADA AWAL HALAMAN -->
+    <div id="loadingState" class="min-h-[70vh] flex items-center justify-center">
+        <span class="text-blue-600 font-bold animate-pulse text-xl">Memuat detail properti...</span>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <main id="mainContent" class="max-w-6xl mx-auto px-6 py-8 hidden">
+        
+        <!-- HEADER (Judul & Alamat) -->
+        <div class="mb-6">
+            <div class="flex items-center space-x-3 mb-2">
+                <span id="badgeKategori" class="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">Kategori</span>
+                <span id="badgeSisaKamar" class="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">Sisa Kamar</span>
+            </div>
+            <h1 id="judulGedung" class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-3">Nama Properti</h1>
+            <p class="text-gray-500 flex items-start text-sm md:text-base">
+                <svg class="w-5 h-5 mr-1.5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <span id="alamatGedung">Alamat lengkap properti</span>
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 relative">
+            
+            <!-- KOLOM KIRI (Galeri, Deskripsi, Peta) -->
+            <div class="lg:col-span-2 space-y-8">
+                
+                <!-- Galeri Foto -->
+                <div class="bg-white p-2 rounded-2xl shadow-sm border border-gray-200">
+                    <!-- Foto Utama -->
+                    <div class="h-64 md:h-96 w-full rounded-xl overflow-hidden mb-2 bg-slate-100">
+                        <img id="mainPhoto" src="" alt="Foto Utama" class="w-full h-full object-cover transition duration-300">
+                    </div>
+                    <!-- Thumbnail Container -->
+                    <div id="thumbnailContainer" class="grid grid-cols-5 gap-2">
+                        <!-- Thumbnails via JS -->
+                    </div>
+                </div>
+
+                <!-- Deskripsi -->
+                <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200">
+                    <h2 class="text-xl font-bold mb-4">Tentang Properti Ini</h2>
+                    <div id="deskripsiGedung" class="text-gray-600 leading-relaxed whitespace-pre-wrap">Deskripsi properti akan muncul di sini.</div>
+                </div>
+
+                <!-- Area Peta Spesifik -->
+                <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200">
+                    <h2 class="text-xl font-bold mb-4">Lokasi di Peta</h2>
+                    <div id="map" class="w-full h-72 rounded-xl border border-gray-300 shadow-inner z-10 relative"></div>
+                </div>
+            </div>
+
+            <!-- KOLOM KANAN (Harga & Booking) - STICKY -->
+            <div class="lg:col-span-1">
+                <div class="sticky top-24 space-y-6">
+                    
+                    <!-- Kartu Booking -->
+                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+                        <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">Harga Sewa</p>
+                        <div class="text-3xl font-bold text-blue-600 mb-6">
+                            <span id="hargaGedung">Rp 0</span> 
+                            <span id="tipeSewaLabel" class="text-base text-gray-500 font-normal">/bulan</span>
+                        </div>
+                        
+                        <button id="btnBooking" onclick="ajukanSewa()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 shadow-md transition flex items-center justify-center">
+                            Ajukan Sewa Sekarang
+                        </button>
+                        <p class="text-xs text-center text-gray-400 mt-3">Tidak ada biaya tersembunyi. Pengajuan langsung ke pemilik.</p>
+                    </div>
+
+                    <!-- Kartu Profil Pemilik -->
+                    <div class="bg-gray-50 p-6 rounded-2xl border border-gray-200 flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-slate-300 rounded-full flex items-center justify-center font-bold text-xl text-white">
+                            <span id="inisialPemilik">A</span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-gray-500 uppercase">Dikelola Oleh</p>
+                            <p id="namaPemilik" class="font-bold text-gray-900 text-lg">Nama Pemilik</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-white border-t border-gray-200 py-6 text-center mt-12">
+        <p class="text-gray-400 text-sm">© 2026 Cangkang System. All rights reserved.</p>
+    </footer>
+
+    <!-- SCRIPT LEAFLET JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // 1. CEK AUTENTIKASI NAVBAR
+        const user = JSON.parse(localStorage.getItem('cangkang_user'));
+        if (user) {
+            let linkDashboard = user.role === 'admin' ? 'dashboard-admin.html' : (user.role === 'penyewa' ? 'dashboard-penyewa.html' : '#');
+            document.getElementById('navUserSection').innerHTML = `<a href="${linkDashboard}" class="text-sm font-semibold mr-4 hover:text-blue-600">Dashboard</a> <button onclick="logout()" class="text-sm text-red-500 font-semibold hover:underline">Keluar</button>`;
+        }
+
+        function logout() {
+            localStorage.removeItem('cangkang_user');
+            window.location.reload();
+        }
+
+        // 2. AMBIL ID DARI URL (contoh: detail.html?id=5)
+        const urlParams = new URLSearchParams(window.location.search);
+        const gedungId = urlParams.get('id');
+
+        if (!gedungId) {
+            alert("ID Properti tidak valid!");
+            window.location.href = 'pencarian.html';
+        } else {
+            loadDetailGedung(gedungId);
+        }
+
+        // Variabel global untuk menyimpan data sementara jika mau dipakai fungsi lain
+        let dataProperti = null;
+
+        // 3. FUNGSI AMBIL DATA DETAIL
+        async function loadDetailGedung(id) {
+            try {
+                const response = await fetch(`http://localhost:5000/api/gedung/${id}`);
+                if(!response.ok) throw new Error("Properti tidak ditemukan");
+                
+                dataProperti = await response.json();
+
+                // Ganti UI
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('mainContent').classList.remove('hidden');
+
+                // Isi Teks
+                document.getElementById('judulGedung').innerText = dataProperti.nama_gedung;
+                document.getElementById('alamatGedung').innerText = dataProperti.alamat;
+                document.getElementById('badgeKategori').innerText = dataProperti.kategori;
+                document.getElementById('hargaGedung').innerText = `Rp ${dataProperti.harga.toLocaleString('id-ID')}`;
+                document.getElementById('tipeSewaLabel').innerText = `/${dataProperti.tipe_sewa}`;
+                document.getElementById('deskripsiGedung').innerText = dataProperti.deskripsi || "Tidak ada deskripsi tambahan dari pemilik.";
+                
+                document.getElementById('namaPemilik').innerText = dataProperti.nama_pemilik;
+                document.getElementById('inisialPemilik').innerText = dataProperti.nama_pemilik.charAt(0).toUpperCase();
+
+                // Logika Sisa Kamar (Jika penuh, matikan tombol)
+                const badgeKamar = document.getElementById('badgeSisaKamar');
+                const btnBooking = document.getElementById('btnBooking');
+                
+                if (dataProperti.sisa_kamar == 0) {
+                    badgeKamar.innerText = "Kamar Penuh";
+                    badgeKamar.classList.replace('bg-green-100', 'bg-red-100');
+                    badgeKamar.classList.replace('text-green-700', 'text-red-700');
+                    
+                    btnBooking.innerText = "Kamar Penuh";
+                    btnBooking.disabled = true;
+                    btnBooking.classList.replace('bg-blue-600', 'bg-slate-400');
+                    btnBooking.classList.replace('hover:bg-blue-700', 'cursor-not-allowed');
+                } else {
+                    badgeKamar.innerText = `Sisa ${dataProperti.sisa_kamar} Kamar`;
+                }
+
+                // Render Galeri Foto
+                renderGaleriFoto(dataProperti.fotos);
+
+                // Render Peta Leaflet
+                renderPetaDetail(dataProperti.latitude, dataProperti.longitude);
+
+            } catch (error) {
+                alert(error.message);
+                window.location.href = 'pencarian.html';
+            }
+        }
+
+        // 4. FUNGSI RENDER GALERI FOTO
+        function renderGaleriFoto(fotos) {
+            const mainPhoto = document.getElementById('mainPhoto');
+            const thumbContainer = document.getElementById('thumbnailContainer');
+
+            if (!fotos || fotos.length === 0) {
+                mainPhoto.src = "https://via.placeholder.com/800x400?text=Tanpa+Foto";
+                return;
+            }
+
+            // Set foto pertama sebagai main
+            const urlBase = 'http://localhost:5000/uploads/';
+            mainPhoto.src = urlBase + fotos[0];
+
+            // Render Thumbnails
+            let htmlThumbs = '';
+            fotos.forEach((foto, index) => {
+                const isActive = index === 0 ? 'border-blue-600 opacity-100' : 'border-transparent opacity-60 hover:opacity-100';
+                htmlThumbs += `
+                    <div class="h-16 md:h-20 rounded-lg overflow-hidden cursor-pointer border-2 ${isActive} transition" onclick="gantiFotoUtama('${urlBase + foto}', this)">
+                        <img src="${urlBase + foto}" class="w-full h-full object-cover">
+                    </div>
+                `;
+            });
+            thumbContainer.innerHTML = htmlThumbs;
+        }
+
+        // Fungsi interaktif mengganti foto utama jika thumbnail diklik
+        function gantiFotoUtama(url, el) {
+            document.getElementById('mainPhoto').src = url;
+            
+            // Hapus efek aktif dari semua thumbnail
+            const allThumbs = document.getElementById('thumbnailContainer').children;
+            for(let thumb of allThumbs) {
+                thumb.classList.replace('border-blue-600', 'border-transparent');
+                thumb.classList.replace('opacity-100', 'opacity-60');
+            }
+            
+            // Tambahkan efek aktif ke thumbnail yang diklik
+            el.classList.replace('border-transparent', 'border-blue-600');
+            el.classList.replace('opacity-60', 'opacity-100');
+        }
+
+        // 5. FUNGSI RENDER PETA DETAIL
+        function renderPetaDetail(lat, lng) {
+            const map = L.map('map').setView([lat, lng], 16);
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri'
+            }).addTo(map);
+
+            L.marker([lat, lng]).addTo(map).bindPopup("<b>Lokasi Properti</b>").openPopup();
+            setTimeout(() => { map.invalidateSize(); }, 500);
+        }
+
+        // 6. FUNGSI AJUKAN SEWA (BOOKING)
+        async function ajukanSewa() {
+            // Cek apakah ada user yang login
+            if (!user) {
+                alert("Anda harus masuk (login) terlebih dahulu untuk mengajukan sewa.");
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // Cek apakah role-nya penyewa
+            if (user.role !== 'penyewa') {
+                alert("Fitur ini hanya dapat digunakan oleh akun berstatus Penyewa.");
+                return;
+            }
+
+            const btn = document.getElementById('btnBooking');
+            btn.innerText = "Memproses...";
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5000/api/booking', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        gedung_id: gedungId,
+                        penyewa_id: user.id
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert(result.message);
+                    window.location.href = 'dashboard-penyewa.html'; // Bawa ke dashboard
+                } else {
+                    alert("Gagal: " + result.message);
+                    btn.innerText = "Ajukan Sewa Sekarang";
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                alert("Kesalahan jaringan: " + error.message);
+                btn.innerText = "Ajukan Sewa Sekarang";
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

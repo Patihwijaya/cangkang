@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cari Kos & Kontrakan - Cangkang</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tambahkan CSS Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        /* Desain khusus untuk marker harga di peta */
+        .price-marker {
+            background-color: #2563eb; /* blue-600 */
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 20px;
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            text-align: center;
+            white-space: nowrap;
+        }
+        .price-marker.penuh {
+            background-color: #64748b; /* slate-500 */
+        }
+        .user-marker {
+            background-color: #ef4444; /* red-500 */
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-slate-800 antialiased flex flex-col min-h-screen">
+
+    <!-- NAVBAR DINAMIS MENGGUNAKAN COMPONENTS.JS -->
+    <div id="navContainer"></div>
+
+    <!-- HEADER & SEARCH BAR -->
+    <header class="bg-white border-b pt-8 pb-6 px-6">
+        <div class="max-w-6xl mx-auto">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Temukan Hunian di Sekitar Anda</h1>
+            <p class="text-gray-500 text-sm mb-6">Gunakan lokasi Anda saat ini atau ketik nama area tujuan (misal: Kampus, Perkantoran).</p>
+            
+            <div class="flex flex-col md:flex-row gap-4 items-center bg-gray-100 p-2 rounded-xl border border-gray-200">
+                <button onclick="gunakanLokasiSaatIni()" class="w-full md:w-auto bg-white text-blue-600 px-6 py-3 rounded-lg text-sm font-bold shadow-sm border border-gray-200 hover:bg-blue-50 transition flex items-center justify-center whitespace-nowrap">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    Lokasi Saya
+                </button>
+                
+                <div class="hidden md:block text-gray-300">|</div>
+                
+                <div class="flex-1 w-full flex">
+                    <input type="text" id="inputCariAlamat" placeholder="Atau cari lokasi lain... (Contoh: UI Depok, Sudirman)" class="w-full bg-transparent px-4 py-3 outline-none text-sm">
+                    <button onclick="cariLokasiManual()" id="btnCari" class="bg-blue-600 text-white px-8 py-3 rounded-lg text-sm font-bold hover:bg-blue-700 transition shadow-sm">
+                        Cari
+                    </button>
+                </div>
+            </div>
+            <p id="statusLokasi" class="text-xs font-semibold text-amber-600 mt-3 hidden">Menampilkan hasil untuk: <span id="namaLokasiAktif"></span></p>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT (PETA & DAFTAR) -->
+    <main class="max-w-6xl mx-auto px-6 py-8 flex-grow">
+        <!-- Area Peta -->
+        <div class="mb-10 rounded-2xl overflow-hidden border border-gray-300 shadow-sm relative h-[40vh] md:h-[50vh]">
+            <div id="map" class="w-full h-full z-10 relative"></div>
+            <!-- Loading Overlay untuk Peta -->
+            <div id="mapLoading" class="absolute inset-0 bg-white/80 z-20 flex items-center justify-center hidden backdrop-blur-sm">
+                <span class="text-blue-600 font-bold animate-pulse">Memuat data properti terdekat...</span>
+            </div>
+        </div>
+
+        <!-- Area Hasil Pencarian -->
+        <div class="flex justify-between items-end mb-6 border-b pb-2">
+            <h2 class="text-xl font-bold text-gray-900">Rekomendasi Terdekat</h2>
+            <div class="text-sm text-gray-500 font-medium">Ditemukan: <span id="totalHasil" class="text-blue-600 font-bold">0</span> Properti</div>
+        </div>
+
+        <div id="hasilPencarianList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Data akan dimuat melalui JavaScript -->
+            <div class="col-span-full text-center py-12 text-gray-500" id="pesanKosong">
+                Silakan izinkan akses lokasi atau ketik area pencarian di atas untuk melihat properti terdekat.
+            </div>
+        </div>
+    </main>
+
+    <!-- FOOTER MENGGUNAKAN COMPONENTS.JS -->
+    <div id="footerContainer"></div>
+
+    <!-- SCRIPT COMPONENTS DAN LEAFLET JS -->
+    <script src="components.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // Render Navbar & Footer Universal
+        document.getElementById('navContainer').innerHTML = renderNavbar();
+        document.getElementById('footerContainer').innerHTML = renderFooter();
+
+        // === VARIABEL GLOBAL ===
+        let map;
+        let layerGedung = L.layerGroup(); // Menyimpan pin-pin properti
+        let markerUser = null; // Menyimpan pin lokasi titik pencarian user
+        
+        let currentLat = -6.1754; // Default: Monas
+        let currentLng = 106.8272;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            inisialisasiPeta();
+            // Langsung coba deteksi lokasi user saat web dibuka
+            gunakanLokasiSaatIni(true); 
+        });
+
+        // === 1. FUNGSI INISIALISASI PETA ===
+        function inisialisasiPeta() {
+            map = L.map('map').setView([currentLat, currentLng], 13);
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri'
+            }).addTo(map);
+
+            layerGedung.addTo(map); // Tambahkan layer kos-kosan ke peta
+        }
+
+        // === 2. MENDAPATKAN LOKASI SAAT INI (GEOLOCATION) ===
+        function gunakanLokasiSaatIni(isAutoLoad = false) {
+            if (navigator.geolocation) {
+                if(!isAutoLoad) alert("Sistem akan meminta izin mengakses lokasi Anda.");
+                
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        currentLat = position.coords.latitude;
+                        currentLng = position.coords.longitude;
+                        
+                        updateTitikPencarian(currentLat, currentLng, "Lokasi Anda Saat Ini");
+                        ambilDataGedungTerdekat(currentLat, currentLng);
+                    },
+                    function(error) {
+                        if(!isAutoLoad) alert("Gagal mendapatkan lokasi. Pastikan GPS aktif dan Anda mengizinkan akses lokasi di browser.");
+                    }
+                );
+            } else {
+                alert("Browser Anda tidak mendukung fitur lokasi otomatis.");
+            }
+        }
+
+        // === 3. PENCARIAN MANUAL DARI INPUT TEKS ===
+        async function cariLokasiManual() {
+            const query = document.getElementById('inputCariAlamat').value;
+            if (!query) return alert("Ketik nama daerah atau alamat terlebih dahulu.");
+
+            const btn = document.getElementById('btnCari');
+            btn.innerText = "Mencari...";
+            btn.disabled = true;
+
+            try {
+                // Konversi teks jadi koordinat (Forward Geocoding)
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+
+                if (data && data.length > 0) {
+                    currentLat = parseFloat(data[0].lat);
+                    currentLng = parseFloat(data[0].lon);
+                    
+                    updateTitikPencarian(currentLat, currentLng, data[0].display_name);
+                    ambilDataGedungTerdekat(currentLat, currentLng);
+                } else {
+                    alert("Lokasi tidak ditemukan, coba gunakan nama kota atau kecamatan yang lebih umum.");
+                }
+            } catch (error) {
+                alert("Kesalahan jaringan saat mencari lokasi.");
+            } finally {
+                btn.innerText = "Cari";
+                btn.disabled = false;
+            }
+        }
+
+        // === 4. UPDATE PIN LOKASI USER DI PETA ===
+        function updateTitikPencarian(lat, lng, namaLokasi) {
+            map.setView([lat, lng], 14);
+
+            // Hapus titik user yang lama jika ada
+            if (markerUser) { map.removeLayer(markerUser); }
+
+            // Buat titik merah berkedip (Animasi CSS) untuk user
+            const userIcon = L.divIcon({ className: 'user-marker', iconSize: [16, 16], iconAnchor: [8, 8] });
+            markerUser = L.marker([lat, lng], { icon: userIcon }).addTo(map)
+                .bindPopup("<b>Titik Pencarian</b><br>Radius dihitung dari sini.").openPopup();
+
+            document.getElementById('statusLokasi').classList.remove('hidden');
+            document.getElementById('namaLokasiAktif').innerText = namaLokasi;
+        }
+
+        // === 5. AMBIL DATA DARI BACKEND API ===
+        async function ambilDataGedungTerdekat(lat, lng) {
+            const listContainer = document.getElementById('hasilPencarianList');
+            const totalText = document.getElementById('totalHasil');
+            const mapLoading = document.getElementById('mapLoading');
+
+            listContainer.innerHTML = ''; // Bersihkan list sebelumnya
+            layerGedung.clearLayers(); // Bersihkan pin lama di peta
+            mapLoading.classList.remove('hidden'); // Tampilkan loading overlay
+
+            try {
+                // Memanggil endpoint API Cangkang
+                const response = await fetch(`http://localhost:5000/api/gedung/terdekat?lat=${lat}&lng=${lng}`);
+                const data = await response.json();
+                
+                mapLoading.classList.add('hidden');
+                totalText.innerText = data.length;
+
+                if (data.length === 0) {
+                    listContainer.innerHTML = `<div class="col-span-full text-center py-12 text-gray-500 bg-white rounded-xl border">
+                        Tidak ada properti ditemukan dalam radius 10 KM dari lokasi ini. Coba geser peta atau cari area lain.
+                    </div>`;
+                    return;
+                }
+
+                // Render setiap properti menggunakan fungsi komponen terpusat dari components.js
+                let htmlCards = '';
+                data.forEach(gedung => {
+                    htmlCards += renderGedungCard(gedung, true); // true = mode radius aktif
+
+                    const fotoUrl = gedung.foto_utama ? `http://localhost:5000/uploads/${gedung.foto_utama}` : 'https://via.placeholder.com/400x200?text=Tanpa+Foto';
+                    const isPenuh = gedung.sisa_kamar == 0;
+                    const jarakFormat = gedung.jarak_km < 1 ? `${(gedung.jarak_km * 1000).toFixed(0)} meter` : `${gedung.jarak_km.toFixed(1)} km`;
+
+                    // --- BIKIN PIN HARGA DI PETA (LEAFLET) ---
+                    const customMarkerHtml = `<div class="price-marker ${isPenuh ? 'penuh' : ''}">Rp ${formatRibuanSingkat(gedung.harga)}</div>`;
+                    const priceIcon = L.divIcon({
+                        className: 'custom-pin',
+                        html: customMarkerHtml,
+                        iconSize: [80, 30],
+                        iconAnchor: [40, 30]
+                    });
+
+                    const markerGedung = L.marker([gedung.latitude, gedung.longitude], { icon: priceIcon });
+                    
+                    markerGedung.bindPopup(`
+                        <div class="w-48">
+                            <img src="${fotoUrl}" class="w-full h-24 object-cover rounded mb-2">
+                            <h4 class="font-bold text-sm">${gedung.nama_gedung}</h4>
+                            <p class="text-xs text-gray-500 mb-2">Jarak: ${jarakFormat}</p>
+                            <p class="text-sm font-bold text-blue-600 mb-2">Rp ${gedung.harga.toLocaleString('id-ID')} / ${gedung.tipe_sewa}</p>
+                            <button onclick="window.location.href='detail.html?id=${gedung.id}'" class="w-full bg-blue-600 text-white text-xs py-1.5 rounded font-semibold">Lihat Detail</button>
+                        </div>
+                    `);
+
+                    layerGedung.addLayer(markerGedung);
+                });
+
+                listContainer.innerHTML = htmlCards;
+
+                // Zoom Out sedikit agar semua marker terlihat dalam 1 layar
+                if(data.length > 0) {
+                    const group = new L.featureGroup([markerUser, ...layerGedung.getLayers()]);
+                    map.fitBounds(group.getBounds(), { padding: [30, 30] });
+                }
+
+            } catch (error) {
+                mapLoading.classList.add('hidden');
+                listContainer.innerHTML = '<div class="col-span-full text-center py-12 text-red-500">Gagal terhubung ke server backend. Pastikan server.js menyala.</div>';
+            }
+        }
+
+        // === 6. UTILITAS TAMBAHAN ===
+        function formatRibuanSingkat(angka) {
+            if(angka >= 1000000) return (angka/1000000).toFixed(1) + ' Jt';
+            if(angka >= 1000) return (angka/1000).toFixed(0) + ' Rb';
+            return angka;
+        }
+    </script>
+</body>
+</html>
